@@ -14,3 +14,4 @@ server-init.cfg
 .deps
 .libs
 src/mod/discord/discord.so
+src/.cache

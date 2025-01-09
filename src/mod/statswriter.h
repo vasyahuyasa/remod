@@ -7,6 +7,12 @@ namespace remod
 {
   namespace statswriter
   {
+    struct guninfo
+    {
+      int shotdamage;
+      int damage;
+    };
+
     struct playerinfo
     {
       const char *name;
@@ -17,11 +23,7 @@ namespace remod
       int frags, flags, deaths, teamkills, shotdamage, damage;
       float effectiveness;
       int suicides;
-      struct
-      {
-        int shotdamage;
-        int damage;
-      } guninfo[NUMGUNS];
+      guninfo gi[NUMGUNS];
     };
     struct teaminfo
     {

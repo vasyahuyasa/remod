@@ -63,7 +63,7 @@ namespace remod
         statsfile->printf(" \"damage\": %d", players[i].damage);
         statsfile->printf(" \"effectiveness\": %f,", players[i].effectiveness);
         statsfile->printf(" \"suicides\": %d,", players[i].suicides);
-        statsfile->printf(" \"guninfo\": [", players[i].suicides);
+        statsfile->printf(" \"guninfo\": [");
         loopj(NUMGUNS)
         {
           if (i != 0)
@@ -71,23 +71,16 @@ namespace remod
             statsfile->printf(",");
           }
           statsfile->printf("{ \"gun\": %d,", j);
-          statsfile->printf("  \"shotdamage\": %d,", players[i].guninfo[j].shotdamage);
-          statsfile->printf("  \"damage\": %d}", players[i].guninfo[j].damage);
+          statsfile->printf("  \"shotdamage\": %d,", players[i].gi[j].shotdamage);
+          statsfile->printf("  \"damage\": %d}", players[i].gi[j].damage);
         }
         statsfile->printf("  ]}");
       }
       statsfile->printf("]");
     }
 
-    void writeto(const char *path, stats stats)
+    void writeto(stream *statsfile, stats stats)
     {
-      stream *statsfile = openfile(path, "wb");
-      if (!statsfile)
-      {
-        conoutf("could not write stats to \"%s\"", path);
-        return;
-      }
-
       statsfile->printf("{ \"version\": %d,", STATSFILE_FORMAT_VERSION);
       write_game(statsfile, stats.game);
       statsfile->printf(",");
@@ -97,27 +90,73 @@ namespace remod
       statsfile->printf("}");
     };
 
+    SVARP(statsdir, "statsdir");
+
     void write(const char *path)
     {
+      static string s;
+      formatstring(s, "%s/%s", statsdir, path);
+
+      stream *statsfile = openfile(s, "wb");
+      if (!statsfile)
+      {
+        conoutf("could not write stats to \"%s\"", s);
+        return;
+      }
+
       vector<playerinfo> players;
-      vector<teaminfo> teams;
 
       loopv(server::clients)
       {
+        playerinfo player = {
+            .name = server::clients[i]->name,
+            .authname = server::clients[i]->authname,
+            .connect_seconds = (unsigned int) server::clients[i]->connectmillis / 1000,
+            .team = server::clients[i]->team,
+            .privilege = server::clients[i]->privilege,
+            .frags = server::clients[i]->state.frags,
+            .flags = server::clients[i]->state.flags,
+            .deaths = server::clients[i]->state.deaths,
+            .teamkills = server::clients[i]->state.teamkills,
+            .shotdamage = server::clients[i]->state.shotdamage,
+            .damage = server::clients[i]->state.damage,
+            .effectiveness = server::clients[i]->state.effectiveness,
+            .suicides = server::clients[i]->state.ext.suicides};
+
+        loopj(NUMGUNS)
+        {
+          player.gi[j].shotdamage = server::clients[i]->state.ext.guninfo[j].shotdamage;
+          player.gi[j].damage = server::clients[i]->state.ext.guninfo[j].damage;
+        }
+
+        players.add(player);
       }
 
-      struct stats stats = {
-        players : {
+      vector<teamscore> scores;
 
-        },
-        teams : {
+      server::smode->getteamscores(scores);
 
-        },
-        game : {
-          mode : server::gamemode,
-          mapname : newstring(server::smapname),
-        },
+      vector<teaminfo> teams;
+      loopv(scores)
+      {
+        teaminfo teaminfo = {
+            .team = newstring(scores[i].team),
+            .score = scores[i].score,
+        };
+        teams.add(teaminfo);
+      }
+
+      stats stats = {
+          .players = players,
+          .teams = teams,
+          .game = {
+              .mode = server::gamemode,
+              .mapname = newstring(server::smapname)},
       };
+
+      writeto(statsfile, stats);
     }
+
+    COMMANDN(writestats, write, "s");
   } // namespace statswriter
 } // namespace remod

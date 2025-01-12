@@ -51,6 +51,7 @@ namespace remod
           statsfile->printf(",");
         }
         statsfile->printf("{\"name\": \"%s\",", players[i].name);
+        statsfile->printf(" \"is_bot\": %d,", players[i].is_bot);
         statsfile->printf(" \"authname\": \"%s\",", players[i].authname);
         statsfile->printf(" \"connect_seconds\": %d,", players[i].connect_seconds);
         statsfile->printf(" \"team\": \"%s\",", players[i].team);
@@ -60,13 +61,13 @@ namespace remod
         statsfile->printf(" \"deaths\": %d,", players[i].deaths);
         statsfile->printf(" \"teamkills\": %d,", players[i].teamkills);
         statsfile->printf(" \"shotdamage\": %d,", players[i].shotdamage);
-        statsfile->printf(" \"damage\": %d", players[i].damage);
+        statsfile->printf(" \"damage\": %d,", players[i].damage);
         statsfile->printf(" \"effectiveness\": %f,", players[i].effectiveness);
         statsfile->printf(" \"suicides\": %d,", players[i].suicides);
         statsfile->printf(" \"guninfo\": [");
         loopj(NUMGUNS)
         {
-          if (i != 0)
+          if (j != 0)
           {
             statsfile->printf(",");
           }
@@ -109,10 +110,11 @@ namespace remod
       loopv(server::clients)
       {
         playerinfo player = {
-            .name = server::clients[i]->name,
-            .authname = server::clients[i]->authname,
-            .connect_seconds = (unsigned int) server::clients[i]->connectmillis / 1000,
-            .team = server::clients[i]->team,
+            .name = newstring(server::clients[i]->name),
+            .is_bot = server::clients[i]->state.aitype != AI_NONE,
+            .authname = newstring(server::clients[i]->authname),
+            .connect_seconds = (unsigned int)server::clients[i]->connectmillis / 1000,
+            .team = newstring(server::clients[i]->team),
             .privilege = server::clients[i]->privilege,
             .frags = server::clients[i]->state.frags,
             .flags = server::clients[i]->state.flags,
@@ -133,18 +135,31 @@ namespace remod
       }
 
       vector<teamscore> scores;
+      if (server::smode && server::smode->hidefrags())
+        server::smode->getteamscores(scores);
+      // loopv(server::clients)
+      // {
+      //     clientinfo *ci = server::clients[i];
+      //     if(ci->state.state!=CS_SPECTATOR && ci->team[0] && scores.htfind(ci->team) < 0)
+      //     {
+      //         if(server::smode && server::smode->hidefrags()) scores.add(teamscore(ci->team, 0));
+      //         else { server::teaminfo *ti = server::teaminfos.access(ci->team); scores.add(teamscore(ci->team, ti ? ti->frags : 0)); }
+      //     }
+      // }
 
-      server::smode->getteamscores(scores);
+      // vector<teamscore> scores;
+
+      // server::smode->getteamscores(scores);
 
       vector<teaminfo> teams;
-      loopv(scores)
-      {
-        teaminfo teaminfo = {
-            .team = newstring(scores[i].team),
-            .score = scores[i].score,
-        };
-        teams.add(teaminfo);
-      }
+      // loopv(scores)
+      // {
+      //   teaminfo teaminfo = {
+      //       .team = newstring(scores[i].team),
+      //       .score = scores[i].score,
+      //   };
+      //   teams.add(teaminfo);
+      // }
 
       stats stats = {
           .players = players,
@@ -155,6 +170,7 @@ namespace remod
       };
 
       writeto(statsfile, stats);
+      statsfile->close();
     }
 
     COMMANDN(writestats, write, "s");

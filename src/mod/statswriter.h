@@ -16,6 +16,7 @@ namespace remod
     struct playerinfo
     {
       const char *name;
+      bool is_bot;
       const char *authname;
       unsigned int connect_seconds;
       const char *team;
